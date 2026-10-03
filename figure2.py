@@ -1,193 +1,183 @@
 import os
-import matplotlib.patches as patches
 import matplotlib.patheffects as pe
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
-# Publication Typography Setup
+# Publication Typography Setup (Elsevier / Springer Academic Style)
 plt.rcParams.update(
     {
         "font.family": "serif",
         "mathtext.fontset": "cm",
         "figure.autolayout": False,
+        "axes.edgecolor": "#334155",
+        "axes.linewidth": 1.2,
     }
 )
 
-# Wide landscape canvas focused strictly on the ranking order
-fig, ax = plt.subplots(figsize=(26, 12), dpi=300, facecolor="#F8FAFC")
-ax.set_facecolor("#F8FAFC")
+# -------------------------------------------------------------
+# 1. Dataset Extraction (Table 11: Sensitivity Analysis)
+# -------------------------------------------------------------
+param_labels = ["(1,1)", "(1,2)", "(2,2)", "(2,3)", "(3,3)", "(4,4)", "(5,5)"]
+n_params = len(param_labels)
+
+# Closeness coefficient matrix: shape (4 alternatives, 7 parameter combinations)
+# Rows: S1, S2, S3, S4 across the 7 parameter combinations
+cc_matrix = np.array([
+    [0.448275, 0.466462, 0.468682, 0.472846, 0.477582, 0.486464, 0.492574],  # S1
+    [0.464052, 0.482551, 0.486342, 0.489832, 0.492861, 0.494368, 0.497624],  # S2
+    [0.587065, 0.593024, 0.598538, 0.604688, 0.609256, 0.609543, 0.616276],  # S3
+    [0.587097, 0.599065, 0.602381, 0.608624, 0.614359, 0.618229, 0.628422],  # S4 (Winner)
+])
+
+alt_labels = [r"\(S_1\)", r"\(S_2\)", r"\(S_3\)", r"\(S_4\)"]
+alt_names = ["Alternative 1", "Alternative 2", "Alternative 3", "Alternative 4 (Optimal)"]
+
+# Professional publication palette: Cool Slate -> Sky -> Emerald -> Crimson
+face_colors = ["#64748B", "#0284C7", "#10B981", "#E11D48"]
+edge_colors = ["#334155", "#0369A1", "#047857", "#9F1239"]
 
 # -------------------------------------------------------------
-# 1. 3D Isometric Chevron Wedge Renderer
+# 2. Canvas & 3D Axes Setup
 # -------------------------------------------------------------
-def draw_3d_chevron_wedge(x_tip, y_mid, w, h, indent=1.8, dx=1.2, dy=0.8,
-                          f_col="#FFFFFF", s_col="#CBD5E1", t_col="#F1F5F9",
-                          e_col="#0F172A", lw=2.8, z=5):
-    """
-    Draws a 3D extruded chevron block pointing in the direction of preference (>).
-    """
-    x_back = x_tip - w
-    y_top = y_mid + h / 2.0
-    y_bot = y_mid - h / 2.0
+fig = plt.figure(figsize=(26, 17), dpi=300, facecolor="#FFFFFF")
+ax = fig.add_subplot(111, projection="3d")
+ax.set_facecolor("#FFFFFF")
 
-    # Ambient drop shadow
-    shadow_poly = [
-        (x_back + indent + 0.3, y_mid - 0.4),
-        (x_back + 0.3, y_bot - 0.4),
-        (x_tip - indent + 0.3, y_bot - 0.4),
-        (x_tip + 0.3, y_mid - 0.4),
-        (x_tip + dx + 0.3, y_mid + dy * 0.7),
-        (x_back + indent + dx + 0.3, y_mid + dy * 0.7)
-    ]
-    ax.add_patch(patches.Polygon(shadow_poly, closed=True, facecolor="#94A3B8", alpha=0.35, zorder=z - 3))
+# Bar Geometry (Compact footprint for maximum depth readability)
+dx_bar = 0.50
+dy_bar = 0.42
 
-    # Front Chevron Face
-    front_verts = [
-        (x_back, y_top),
-        (x_tip - indent, y_top),
-        (x_tip, y_mid),
-        (x_tip - indent, y_bot),
-        (x_back, y_bot),
-        (x_back + indent, y_mid)
-    ]
-    ax.add_patch(patches.Polygon(front_verts, closed=True, facecolor=f_col, edgecolor=e_col, linewidth=lw, zorder=z))
+# Render 3D Bars in order from S1 (back) to S4 (front)
+for i in range(4):
+    y_idx = i * 1.05
+    for j in range(n_params):
+        x_idx = j * 1.25
+        z_val = cc_matrix[i, j]
 
-    # Top Edge Facet
-    top_verts = [
-        (x_back, y_top),
-        (x_tip - indent, y_top),
-        (x_tip - indent + dx, y_top + dy),
-        (x_back + dx, y_top + dy)
-    ]
-    ax.add_patch(patches.Polygon(top_verts, closed=True, facecolor=t_col, edgecolor=e_col, linewidth=lw, zorder=z + 1))
-
-    # Upper Slanted Right Facet
-    upper_right = [
-        (x_tip - indent, y_top),
-        (x_tip, y_mid),
-        (x_tip + dx, y_mid + dy),
-        (x_tip - indent + dx, y_top + dy)
-    ]
-    ax.add_patch(patches.Polygon(upper_right, closed=True, facecolor=s_col, edgecolor=e_col, linewidth=lw, zorder=z + 1))
-
-
-# -------------------------------------------------------------
-# 2. Pure Ranking Order Sequence: S4 > S3 > S2 > S1
-# -------------------------------------------------------------
-elements = [
-    {
-        "id": "\(S_4\)",
-        "f": "#FECDD3", "s": "#E11D48", "t": "#FFE4E6",
-        "edge": "#BE123C", "text_col": "#9F1239"
-    },
-    {
-        "id": "\(S_3\)",
-        "f": "#A7F3D0", "s": "#059669", "t": "#D1FAE5",
-        "edge": "#047857", "text_col": "#065F46"
-    },
-    {
-        "id": "\(S_2\)",
-        "f": "#BAE6FD", "s": "#0284C7", "t": "#E0F2FE",
-        "edge": "#0369A1", "text_col": "#075985"
-    },
-    {
-        "id": "\(S_1\)",
-        "f": "#E2E8F0", "s": "#64748B", "t": "#F1F5F9",
-        "edge": "#475569", "text_col": "#334155"
-    }
-]
-
-y_center = 5.2
-chevron_w = 4.8
-chevron_h = 3.6
-indent_val = 1.3
-dx_val, dy_val = 1.1, 0.8
-
-x_positions = [6.5, 12.0, 17.5, 23.0]
-
-# -------------------------------------------------------------
-# 3. Render 3D Chevrons and Preference Connectors
-# -------------------------------------------------------------
-for i, el in enumerate(elements):
-    xt = x_positions[i]
-
-    draw_3d_chevron_wedge(
-        xt, y_center, chevron_w, chevron_h,
-        indent=indent_val, dx=dx_val, dy=dy_val,
-        f_col=el["f"], s_col=el["s"], t_col=el["t"],
-        e_col=el["edge"], lw=2.8, z=5 + i * 2
-    )
-
-    # Center alternative ID inside each chevron block
-    text_x = xt - chevron_w / 2.0 + indent_val * 0.4
-    ax.text(
-        text_x, y_center,
-        el["id"],
-        color=el["text_col"], ha="center", va="center",
-        fontsize=38.0, fontweight="heavy",
-        path_effects=[pe.withStroke(linewidth=3.0, foreground="#FFFFFF")],
-        zorder=20 + i
-    )
-
-    # 3D relational ">" symbol between chevrons
-    if i < 3:
-        next_x = x_positions[i + 1]
-        mid_rel_x = (xt + (next_x - chevron_w)) / 2.0 + 0.1
-        ax.text(
-            mid_rel_x, y_center + 0.1,
-            ">",
-            color="#0F172A", ha="center", va="center",
-            fontsize=40.0, fontweight="heavy",
-            path_effects=[pe.withStroke(linewidth=2.5, foreground="#FFFFFF")],
-            zorder=25
+        ax.bar3d(
+            x_idx - dx_bar / 2.0,
+            y_idx - dy_bar / 2.0,
+            0.0,
+            dx_bar,
+            dy_bar,
+            z_val,
+            color=face_colors[i],
+            edgecolor=edge_colors[i],
+            linewidth=1.1,
+            alpha=0.88,
+            shade=True,
         )
 
 # -------------------------------------------------------------
-# 4. Figure Header Banner
+# 3. 3D Trajectory Ribbons & Value Callouts for Optimal S4
 # -------------------------------------------------------------
-header_patch = patches.FancyBboxPatch(
-    (2.5, 9.2), 21.0, 1.6,
-    boxstyle="round,pad=0.05,rounding_size=0.4",
-    facecolor="#0B2545", edgecolor="#38BDF8", linewidth=2.6, zorder=30
+# Plot connecting trend splines across parameter variations for each alternative
+for i in range(4):
+    y_line = np.full(n_params, i * 1.05)
+    x_line = np.arange(n_params) * 1.25
+    z_line = cc_matrix[i, :]
+
+    ax.plot(
+        x_line, y_line, z_line + 0.002,
+        color=edge_colors[i], lw=2.4,
+        marker="o", markersize=6, markerfacecolor="#FFFFFF", markeredgecolor=edge_colors[i],
+        markeredgewidth=1.8, zorder=20
+    )
+
+# Floating Value Badges strictly on the apex alternative S4
+for j in range(n_params):
+    xj = j * 1.25
+    yj = 3 * 1.05
+    zj = cc_matrix[3, j]
+
+    ax.text(
+        xj, yj, zj + 0.024,
+        f"{zj:.4f}",
+        color="#9F1239", ha="center", va="bottom",
+        fontsize=11.5, fontweight="heavy",
+        path_effects=[pe.withStroke(linewidth=3.0, foreground="#FFFFFF")],
+        zorder=30
+    )
+
+# -------------------------------------------------------------
+# 4. View Angle, Pane Styling & Axis Customization
+# -------------------------------------------------------------
+ax.view_init(elev=26, azim=-62)
+
+# X-Axis: Control Parameters
+x_ticks = np.arange(n_params) * 1.25
+ax.set_xticks(x_ticks)
+ax.set_xticklabels(param_labels, fontsize=14.5, fontweight="bold", color="#0F172A")
+ax.set_xlabel(r"\(\mathbf{Combinations\ of\ Control\ Parameters}\ (p, q)\)", fontsize=15.0, fontweight="bold", labelpad=18, color="#0F172A")
+
+# Y-Axis: Alternatives
+y_ticks = np.arange(4) * 1.05
+ax.set_yticks(y_ticks)
+ax.set_yticklabels(alt_labels, fontsize=16.0, fontweight="bold", color="#0F172A")
+ax.set_ylabel(r"\(\mathbf{Alternatives}\)", fontsize=15.0, fontweight="bold", labelpad=18, color="#0F172A")
+
+# Z-Axis: Closeness Coefficient values
+ax.set_zlim(0.0, 0.74)
+ax.set_zticks(np.arange(0.0, 0.71, 0.10))
+ax.tick_params(axis="z", labelsize=13.0)
+ax.set_zlabel(r"\(\mathbf{Closeness\ Coefficient\ } CC(S_i)\)", fontsize=15.0, fontweight="bold", labelpad=16, color="#0F172A")
+
+# Soft publication pane backgrounds
+ax.xaxis.pane.set_facecolor("#F8FAFC")
+ax.yaxis.pane.set_facecolor("#FFFFFF")
+ax.zaxis.pane.set_facecolor("#F1F5F9")
+ax.xaxis.pane.set_edgecolor("#CBD5E1")
+ax.yaxis.pane.set_edgecolor("#FFFFFF")
+ax.zaxis.pane.set_edgecolor("#CBD5E1")
+
+ax.grid(True, linestyle="--", linewidth=0.7, color="#CBD5E1", alpha=0.75)
+
+# -------------------------------------------------------------
+# 5. Header Title & Synthesis Note Box
+# -------------------------------------------------------------
+plt.title(
+    "Sensitivity Analysis & Robustness Assessment Across Parameter Spaces (Table 11)\n",
+    fontsize=23.0,
+    fontweight="bold",
+    color="#0B2545",
+    pad=25,
 )
-ax.add_patch(header_patch)
 
-ax.text(
-    13.0, 10.0,
-    "3D Representation of Ranking Order",
-    color="#FFFFFF", ha="center", va="center",
-    fontsize=24.0, fontweight="bold",
-    path_effects=[pe.withStroke(linewidth=2.2, foreground="#000000")],
-    zorder=32
+summary_message = (
+    "Robustness Invariance Proof:  S4 > S3 > S2 > S1 holds strictly invariant across all (p, q) combinations.\n"
+    "Alternative S4 consistently achieves optimal closeness CC(S4) ∈ [0.587097, 0.628422], verifying decision stability."
+)
+
+fig.text(
+    0.50,
+    0.045,
+    summary_message,
+    ha="center",
+    va="center",
+    fontsize=16.0,
+    fontweight="bold",
+    color="#0B2545",
+    linespacing=1.35,
+    bbox=dict(
+        boxstyle="round,pad=0.75,rounding_size=0.35",
+        facecolor="#F0F9FF",
+        edgecolor="#0284C7",
+        linewidth=1.8,
+    ),
 )
 
 # -------------------------------------------------------------
-# 5. Clean Baseline Equation
+# 6. Save & Display Output
 # -------------------------------------------------------------
-ax.text(
-    13.0, 1.4,
-    "\(S_4 > S_3 > S_2 > S_1\)",
-    color="#0B2545", ha="center", va="center",
-    fontsize=32.0, fontweight="bold",
-    path_effects=[pe.withStroke(linewidth=3.0, foreground="#FFFFFF")],
-    zorder=30
-)
-
-# -------------------------------------------------------------
-# 6. Viewport & Export Options
-# -------------------------------------------------------------
-ax.set_xlim(0.0, 26.0)
-ax.set_ylim(0.0, 12.0)
-ax.axis("off")
-
-plt.subplots_adjust(left=0.01, right=0.99, bottom=0.01, top=0.99)
+plt.subplots_adjust(left=0.03, right=0.97, bottom=0.10, top=0.92)
 
 out_dir = os.getcwd()
-png_out = os.path.join(out_dir, "Figure4_Ranking_Order_3D.png")
-pdf_out = os.path.join(out_dir, "Figure4_Ranking_Order_3D.pdf")
+png_out = os.path.join(out_dir, "Figure5_Table11_Sensitivity_3D.png")
+pdf_out = os.path.join(out_dir, "Figure5_Table11_Sensitivity_3D.pdf")
 
 plt.savefig(png_out, dpi=300, bbox_inches="tight", facecolor=fig.get_facecolor())
 plt.savefig(pdf_out, dpi=300, bbox_inches="tight", facecolor=fig.get_facecolor())
 
-print(f"Figure 4 saved successfully:\n- {png_out}\n- {pdf_out}")
+print(f"Publication-ready Figure 5 saved successfully:\n- {png_out}\n- {pdf_out}")
 plt.show()
