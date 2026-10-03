@@ -13,210 +13,181 @@ plt.rcParams.update(
     }
 )
 
-fig, ax = plt.subplots(figsize=(24, 18), dpi=300, facecolor="#F8FAFC")
+# Wide landscape canvas focused strictly on the ranking order
+fig, ax = plt.subplots(figsize=(26, 12), dpi=300, facecolor="#F8FAFC")
 ax.set_facecolor("#F8FAFC")
 
 # -------------------------------------------------------------
-# 1. 3D Isometric Stepped Tier Renderer
+# 1. 3D Isometric Chevron Wedge Renderer
 # -------------------------------------------------------------
-def draw_3d_tier(xc, y_bot, w_front, h_front, dx=1.1, dy=0.85, 
-                 f_col="#FFFFFF", s_col="#CBD5E1", t_col="#F1F5F9", 
-                 e_col="#0F172A", lw=2.4, z=5):
-    """Renders an isometric 3D tiered block with clean drop shadow."""
-    half_w = w_front / 2.0
-    
-    # Ambient Drop Shadow
-    shadow_poly = [
-        (xc - half_w + 0.4, y_bot - 0.35),
-        (xc + half_w + 0.8, y_bot - 0.35),
-        (xc + half_w + dx + 0.5, y_bot + dy * 0.7),
-        (xc - half_w + dx * 0.5, y_bot + dy * 0.7)
-    ]
-    ax.add_patch(patches.Polygon(shadow_poly, closed=True, facecolor="#94A3B8", alpha=0.30, zorder=z - 3))
+def draw_3d_chevron_wedge(x_tip, y_mid, w, h, indent=1.8, dx=1.2, dy=0.8,
+                          f_col="#FFFFFF", s_col="#CBD5E1", t_col="#F1F5F9",
+                          e_col="#0F172A", lw=2.8, z=5):
+    """
+    Draws a 3D extruded chevron block pointing in the direction of preference (>).
+    """
+    x_back = x_tip - w
+    y_top = y_mid + h / 2.0
+    y_bot = y_mid - h / 2.0
 
-    # Front Face
+    # Ambient drop shadow
+    shadow_poly = [
+        (x_back + indent + 0.3, y_mid - 0.4),
+        (x_back + 0.3, y_bot - 0.4),
+        (x_tip - indent + 0.3, y_bot - 0.4),
+        (x_tip + 0.3, y_mid - 0.4),
+        (x_tip + dx + 0.3, y_mid + dy * 0.7),
+        (x_back + indent + dx + 0.3, y_mid + dy * 0.7)
+    ]
+    ax.add_patch(patches.Polygon(shadow_poly, closed=True, facecolor="#94A3B8", alpha=0.35, zorder=z - 3))
+
+    # Front Chevron Face
     front_verts = [
-        (xc - half_w, y_bot),
-        (xc + half_w, y_bot),
-        (xc + half_w, y_bot + h_front),
-        (xc - half_w, y_bot + h_front)
+        (x_back, y_top),
+        (x_tip - indent, y_top),
+        (x_tip, y_mid),
+        (x_tip - indent, y_bot),
+        (x_back, y_bot),
+        (x_back + indent, y_mid)
     ]
     ax.add_patch(patches.Polygon(front_verts, closed=True, facecolor=f_col, edgecolor=e_col, linewidth=lw, zorder=z))
 
-    # Top Cap (Deck)
+    # Top Edge Facet
     top_verts = [
-        (xc - half_w, y_bot + h_front),
-        (xc + half_w, y_bot + h_front),
-        (xc + half_w + dx, y_bot + h_front + dy),
-        (xc - half_w + dx, y_bot + h_front + dy)
+        (x_back, y_top),
+        (x_tip - indent, y_top),
+        (x_tip - indent + dx, y_top + dy),
+        (x_back + dx, y_top + dy)
     ]
     ax.add_patch(patches.Polygon(top_verts, closed=True, facecolor=t_col, edgecolor=e_col, linewidth=lw, zorder=z + 1))
 
-    # Right Side Face
-    side_verts = [
-        (xc + half_w, y_bot),
-        (xc + half_w + dx, y_bot + dy),
-        (xc + half_w + dx, y_bot + h_front + dy),
-        (xc + half_w, y_bot + h_front)
+    # Upper Slanted Right Facet
+    upper_right = [
+        (x_tip - indent, y_top),
+        (x_tip, y_mid),
+        (x_tip + dx, y_mid + dy),
+        (x_tip - indent + dx, y_top + dy)
     ]
-    ax.add_patch(patches.Polygon(side_verts, closed=True, facecolor=s_col, edgecolor=e_col, linewidth=lw, zorder=z))
+    ax.add_patch(patches.Polygon(upper_right, closed=True, facecolor=s_col, edgecolor=e_col, linewidth=lw, zorder=z + 1))
 
 
 # -------------------------------------------------------------
-# 2. Ranking Hierarchy Data: S4 > S3 > S2 > S1
+# 2. Pure Ranking Order Sequence: S4 > S3 > S2 > S1
 # -------------------------------------------------------------
-tiers = [
+elements = [
     {
-        "id": r"\(S_1\)", "rank": "Rank 4", "desc": "Baseline Candidate",
-        "w": 18.0, "h": 2.2, "y": 3.0,
-        "f": "#E2E8F0", "s": "#94A3B8", "t": "#F1F5F9", "edge": "#475569", "badge": "#64748B"
+        "id": "\(S_4\)",
+        "f": "#FECDD3", "s": "#E11D48", "t": "#FFE4E6",
+        "edge": "#BE123C", "text_col": "#9F1239"
     },
     {
-        "id": r"\(S_2\)", "rank": "Rank 3", "desc": "Moderate Competitiveness",
-        "w": 14.2, "h": 2.2, "y": 5.8,
-        "f": "#BAE6FD", "s": "#0284C7", "t": "#E0F2FE", "edge": "#0369A1", "badge": "#0284C7"
+        "id": "\(S_3\)",
+        "f": "#A7F3D0", "s": "#059669", "t": "#D1FAE5",
+        "edge": "#047857", "text_col": "#065F46"
     },
     {
-        "id": r"\(S_3\)", "rank": "Rank 2", "desc": "High Performing Runner-up",
-        "w": 10.6, "h": 2.2, "y": 8.6,
-        "f": "#A7F3D0", "s": "#059669", "t": "#D1FAE5", "edge": "#047857", "badge": "#059669"
+        "id": "\(S_2\)",
+        "f": "#BAE6FD", "s": "#0284C7", "t": "#E0F2FE",
+        "edge": "#0369A1", "text_col": "#075985"
     },
     {
-        "id": r"\(S_4\)", "rank": "Rank 1 ★", "desc": "Optimal Selected Solution",
-        "w": 7.0, "h": 2.4, "y": 11.4,
-        "f": "#FECDD3", "s": "#E11D48", "t": "#FFE4E6", "edge": "#BE123C", "badge": "#BE123C"
+        "id": "\(S_1\)",
+        "f": "#E2E8F0", "s": "#64748B", "t": "#F1F5F9",
+        "edge": "#475569", "text_col": "#334155"
     }
 ]
 
-center_x = 10.5
+y_center = 5.2
+chevron_w = 4.8
+chevron_h = 3.6
+indent_val = 1.3
+dx_val, dy_val = 1.1, 0.8
+
+x_positions = [6.5, 12.0, 17.5, 23.0]
 
 # -------------------------------------------------------------
-# 3. Render 3D Stepped Pyramid Tiers
+# 3. Render 3D Chevrons and Preference Connectors
 # -------------------------------------------------------------
-for i, t in enumerate(tiers):
-    draw_3d_tier(
-        center_x, t["y"], t["w"], t["h"],
-        dx=1.1, dy=0.85,
-        f_col=t["f"], s_col=t["s"], t_col=t["t"],
-        e_col=t["edge"], lw=2.6, z=4 + i * 4
+for i, el in enumerate(elements):
+    xt = x_positions[i]
+
+    draw_3d_chevron_wedge(
+        xt, y_center, chevron_w, chevron_h,
+        indent=indent_val, dx=dx_val, dy=dy_val,
+        f_col=el["f"], s_col=el["s"], t_col=el["t"],
+        e_col=el["edge"], lw=2.8, z=5 + i * 2
     )
 
-    # Inset Left Badge (Alternative ID)
-    badge_w, badge_h = 2.6, 1.25
-    bx = center_x - t["w"] / 2.0 + 1.8
-    by = t["y"] + t["h"] / 2.0
-    
-    badge = patches.FancyBboxPatch(
-        (bx - badge_w / 2, by - badge_h / 2), badge_w, badge_h,
-        boxstyle="round,pad=0.04,rounding_size=0.35",
-        facecolor=t["badge"], edgecolor="#FFFFFF", linewidth=2.0, zorder=20 + i
-    )
-    ax.add_patch(badge)
-
+    # Center alternative ID inside each chevron block
+    text_x = xt - chevron_w / 2.0 + indent_val * 0.4
     ax.text(
-        bx, by,
-        t["id"],
-        color="#FFFFFF", ha="center", va="center",
-        fontsize=28, fontweight="heavy",
-        path_effects=[pe.withStroke(linewidth=1.8, foreground="#000000")],
-        zorder=22 + i
-    )
-
-    # Center-Right Text (Rank and Description)
-    ax.text(
-        center_x + 0.5, by + 0.32,
-        t["rank"],
-        color=t["badge"], ha="left", va="center",
-        fontsize=28, fontweight="heavy",
-        zorder=20 + i
-    )
-    ax.text(
-        center_x + 0.5, by - 0.35,
-        t["desc"],
-        color="#1E293B", ha="left", va="center",
-        fontsize=28, fontweight="semibold",
+        text_x, y_center,
+        el["id"],
+        color=el["text_col"], ha="center", va="center",
+        fontsize=38.0, fontweight="heavy",
+        path_effects=[pe.withStroke(linewidth=3.0, foreground="#FFFFFF")],
         zorder=20 + i
     )
 
-# -------------------------------------------------------------
-# 4. Ascending Preference Indicator (Right Side Arrow)
-# -------------------------------------------------------------
-arrow_x = center_x + 10.8
-ax.annotate(
-    "",
-    xy=(arrow_x, 13.8),
-    xytext=(arrow_x, 3.2),
-    arrowprops=dict(
-        arrowstyle="-|>",
-        color="#E11D48",
-        lw=4.5,
-        mutation_scale=32
-    ),
-    zorder=10
-)
-
-ax.text(
-    arrow_x + 0.6, 8.5,
-    "Ascending Preference Order\n(Relative Closeness Convergence)",
-    color="#9F1239", ha="left", va="center",
-    fontsize=28, fontweight="bold", linespacing=1.25,
-    rotation=270, zorder=12
-)
+    # 3D relational ">" symbol between chevrons
+    if i < 3:
+        next_x = x_positions[i + 1]
+        mid_rel_x = (xt + (next_x - chevron_w)) / 2.0 + 0.1
+        ax.text(
+            mid_rel_x, y_center + 0.1,
+            ">",
+            color="#0F172A", ha="center", va="center",
+            fontsize=40.0, fontweight="heavy",
+            path_effects=[pe.withStroke(linewidth=2.5, foreground="#FFFFFF")],
+            zorder=25
+        )
 
 # -------------------------------------------------------------
-# 5. Top Header Banner & Base Summary Card
+# 4. Figure Header Banner
 # -------------------------------------------------------------
 header_patch = patches.FancyBboxPatch(
-    (2.0, 15.6), 20.0, 1.4,
-    boxstyle="round,pad=0.04,rounding_size=0.35",
-    facecolor="#0B2545", edgecolor="#38BDF8", linewidth=2.4, zorder=30
+    (2.5, 9.2), 21.0, 1.6,
+    boxstyle="round,pad=0.05,rounding_size=0.4",
+    facecolor="#0B2545", edgecolor="#38BDF8", linewidth=2.6, zorder=30
 )
 ax.add_patch(header_patch)
 
 ax.text(
-    12.0, 16.3,
-    "Hierarchical Pyramid Ranking of Decision Alternatives",
+    13.0, 10.0,
+    "3D Representation of Ranking Order",
     color="#FFFFFF", ha="center", va="center",
-    fontsize=28, fontweight="bold",
+    fontsize=24.0, fontweight="bold",
     path_effects=[pe.withStroke(linewidth=2.2, foreground="#000000")],
     zorder=32
 )
 
-panel_patch = patches.FancyBboxPatch(
-    (2.0, 0.6), 20.0, 1.3,
-    boxstyle="round,pad=0.06,rounding_size=0.35",
-    facecolor="#EFF6FF", edgecolor="#2563EB", linewidth=1.8, zorder=30
-)
-ax.add_patch(panel_patch)
-
+# -------------------------------------------------------------
+# 5. Clean Baseline Equation
+# -------------------------------------------------------------
 ax.text(
-    12.0, 1.42,
-    "Confirmed Ranking Hierarchy:  S4 > S3 > S2 > S1",
-    color="#1E3A8A", ha="center", va="center",
-    fontsize=28, fontweight="heavy", zorder=32
-)
-ax.text(
-    12.0, 0.95,
-    "Alternative S4 achieves apex rank (optimal choice) over runner-up S3 and lower-order alternatives",
-    color="#334155", ha="center", va="center",
-    fontsize=28, fontweight="semibold", zorder=32
+    13.0, 1.4,
+    "\(S_4 > S_3 > S_2 > S_1\)",
+    color="#0B2545", ha="center", va="center",
+    fontsize=32.0, fontweight="bold",
+    path_effects=[pe.withStroke(linewidth=3.0, foreground="#FFFFFF")],
+    zorder=30
 )
 
 # -------------------------------------------------------------
-# 6. Viewport & Save Options
+# 6. Viewport & Export Options
 # -------------------------------------------------------------
-ax.set_xlim(0.0, 24.0)
-ax.set_ylim(0.0, 18.0)
+ax.set_xlim(0.0, 26.0)
+ax.set_ylim(0.0, 12.0)
 ax.axis("off")
 
-plt.subplots_adjust(left=0.02, right=0.98, bottom=0.02, top=0.98)
+plt.subplots_adjust(left=0.01, right=0.99, bottom=0.01, top=0.99)
 
 out_dir = os.getcwd()
-png_out = os.path.join(out_dir, "Figure4_Ranking_Pyramid_3D.png")
-pdf_out = os.path.join(out_dir, "Figure4_Ranking_Pyramid_3D.pdf")
+png_out = os.path.join(out_dir, "Figure4_Ranking_Order_3D.png")
+pdf_out = os.path.join(out_dir, "Figure4_Ranking_Order_3D.pdf")
 
 plt.savefig(png_out, dpi=300, bbox_inches="tight", facecolor=fig.get_facecolor())
 plt.savefig(pdf_out, dpi=300, bbox_inches="tight", facecolor=fig.get_facecolor())
 
-print(f"Figure 4 successfully generated:\n- {png_out}\n- {pdf_out}")
+print(f"Figure 4 saved successfully:\n- {png_out}\n- {pdf_out}")
 plt.show()
